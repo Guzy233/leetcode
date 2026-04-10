@@ -3,3 +3,6 @@
 **/problems/**
 **/node_modules
 **/tests/**
+**/__pycache__
+descriptions
+.codex

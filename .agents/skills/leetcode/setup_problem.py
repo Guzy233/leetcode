@@ -6,6 +6,9 @@ import sys
 import requests
 
 
+DESCRIPTION_DIR = "descriptions"
+
+
 LANGUAGE_CONFIGS = {
     "rust": {
         "label": "Rust",
@@ -33,7 +36,6 @@ LANGUAGE_CONFIGS = {
         "snippet_slugs": ["golang"],
         "root_dir": "go",
         "problem_dir": os.path.join("go", "problems"),
-        "problem_md_dir": os.path.join("go", "problems"),
         "code_ext": "_test.go",
     },
     "typescript": {
@@ -161,14 +163,11 @@ def append_line_if_missing(path, line):
     return True
 
 
-def build_problem_paths(fs_slug, language_key):
+def build_problem_paths(fs_slug, description_slug, language_key):
     config = LANGUAGE_CONFIGS[language_key]
-    if language_key == "go":
-        md_path = os.path.join(config["problem_md_dir"], f"{fs_slug}.md")
-        code_path = os.path.join(config["problem_dir"], f"{fs_slug}{config['code_ext']}")
-        return md_path, code_path
-    base_path = os.path.join(config["problem_dir"], fs_slug)
-    return f"{base_path}.md", f"{base_path}{config['code_ext']}"
+    md_path = os.path.join(DESCRIPTION_DIR, f"{description_slug}.md")
+    code_path = os.path.join(config["problem_dir"], f"{fs_slug}{config['code_ext']}")
+    return md_path, code_path
 
 
 def build_test_path(fs_slug, language_key):
@@ -187,7 +186,7 @@ def build_problem_md(title, content):
     return f"# {title}\n\n{content}\n"
 
 
-def build_rust_template(rust_code):
+def build_rust_template(rust_code, md_hint_path):
     has_list_node = "ListNode" in rust_code
     has_tree_node = "TreeNode" in rust_code
 
@@ -230,6 +229,9 @@ def build_rust_template(rust_code):
 
 pub struct Solution;
 
+// Problem statement file
+// "{md_hint_path}"
+
 #[cfg(test)]
 mod tests {{
     use super::*;
@@ -250,7 +252,7 @@ mod tests {{
 """
 
 
-def build_python_template(code):
+def build_python_template(code, md_hint_path):
     python_code = code.rstrip() + "\n"
     match = re.search(r"^([ \t]*)def\s+\w+\s*\(.*\)\s*(?:->\s*[^:]+)?:\s*$", python_code, re.MULTILINE)
     if match:
@@ -260,6 +262,9 @@ def build_python_template(code):
         python_code = python_code.replace(header, replacement, 1)
 
     return f'''{python_code}
+
+# Problem statement file
+# "{md_hint_path}"
 
 import pytest
 
@@ -277,16 +282,18 @@ def test_examples(input_data, expected):
 '''
 
 
-def build_cpp_template(code, title):
+def build_cpp_template(code, title, md_hint_path):
     return f"""// {title}
 // Build locally if needed:
 // g++ -std=c++20 -O2 -Wall problems/<file>.cpp
+// Problem statement file
+// "{md_hint_path}"
 
 {code}
 """
 
 
-def build_go_template(code):
+def build_go_template(code, md_hint_path):
     go_code = code
     if not re.search(r"^\s*package\s+\w+", go_code, re.MULTILINE):
         go_code = f"package problems\n\n{go_code}"
@@ -305,6 +312,9 @@ import "testing"
 
 {go_code_body}
 
+// Problem statement file
+// "{md_hint_path}"
+
 func Test_example_1(t *testing.T) {{
     // got := minimumDistance(...)
     // want := ...
@@ -316,9 +326,11 @@ func Test_example_1(t *testing.T) {{
 """
 
 
-def build_typescript_template(code):
+def build_typescript_template(code, md_hint_path):
     return f"""{code}
 
+// Problem statement file
+// "{md_hint_path}"
 export {{}};
 """
 
@@ -343,17 +355,17 @@ def build_test_template(language_key, fs_slug, code):
     return None
 
 
-def build_code_template(language_key, code, title):
+def build_code_template(language_key, code, title, md_hint_path):
     if language_key == "rust":
-        return build_rust_template(code)
+        return build_rust_template(code, md_hint_path)
     if language_key == "python":
-        return build_python_template(code)
+        return build_python_template(code, md_hint_path)
     if language_key == "cpp":
-        return build_cpp_template(code, title)
+        return build_cpp_template(code, title, md_hint_path)
     if language_key == "go":
-        return build_go_template(code)
+        return build_go_template(code, md_hint_path)
     if language_key == "typescript":
-        return build_typescript_template(code)
+        return build_typescript_template(code, md_hint_path)
     raise ValueError(f"Unsupported language: {language_key}")
 
 
@@ -363,7 +375,8 @@ def write_problem_files(data, slug, language_key):
     content = data.get("translatedContent") or data.get("content")
     frontend_id = data.get("questionFrontendId", "0")
     fs_slug = f"p{frontend_id}_{slug.replace('-', '_')}"
-    md_path, code_path = build_problem_paths(fs_slug, language_key)
+    description_slug = f"p{frontend_id}-{slug}"
+    md_path, code_path = build_problem_paths(fs_slug, description_slug, language_key)
     test_path = build_test_path(fs_slug, language_key)
     snippet = parse_code(data["codeSnippets"], config["snippet_slugs"])
 
@@ -371,7 +384,8 @@ def write_problem_files(data, slug, language_key):
         raise Exception(f"{config['label']} snippet not found for '{slug}'")
 
     write_text(md_path, build_problem_md(title, content))
-    write_text(code_path, build_code_template(language_key, snippet, title))
+    md_hint_path = os.path.join(DESCRIPTION_DIR, f"{description_slug}.md").replace("/", "\\")
+    write_text(code_path, build_code_template(language_key, snippet, title, md_hint_path))
     print(f"Created {md_path}")
     print(f"Created {code_path}")
 
