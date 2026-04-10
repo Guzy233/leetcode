@@ -26,7 +26,16 @@ python3 .agents/skills/leetcode/setup_problem.py <slug-or-url> --lang rust --lan
 
 # Generate all supported languages
 python3 .agents/skills/leetcode/setup_problem.py <slug-or-url> --all-langs
+
+# Override description language for this run
+python3 .agents/skills/leetcode/setup_problem.py <slug-or-url> --description-lang en
 ```
+
+Default behavior:
+
+- If `--lang` is not provided, the script uses the configured default languages.
+- If no project config exists, it falls back to the built-in default language selection.
+- Command-line arguments override defaults for the current run.
 
 ## 2. Current Output Layout
 

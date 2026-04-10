@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import re
 import sys
@@ -7,6 +8,13 @@ import requests
 
 
 DESCRIPTION_DIR = "descriptions"
+DEFAULT_REGION = "cn"
+DEFAULT_DESCRIPTION_LANGUAGE = "zh"
+DEFAULT_PROGRAMMING_LANGUAGES = ["rust"]
+DEFAULT_CONFIG_PATHS = [
+    "leetcode.config.json",
+    os.path.join(".agents", "skills", "leetcode", "config.json"),
+]
 
 
 LANGUAGE_CONFIGS = {
@@ -53,6 +61,81 @@ LANGUAGE_CONFIGS = {
         "code_ext": ".ts",
     },
 }
+
+DESCRIPTION_LANGUAGE_ALIASES = {
+    "zh": "zh",
+    "cn": "zh",
+    "zh-cn": "zh",
+    "zh_cn": "zh",
+    "chinese": "zh",
+    "en": "en",
+    "en-us": "en",
+    "en_us": "en",
+    "english": "en",
+}
+
+
+def load_config():
+    for path in DEFAULT_CONFIG_PATHS:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+            if not isinstance(data, dict):
+                raise ValueError(f"Config file must contain a JSON object: {path}")
+            return data, path
+    return {}, None
+
+
+def normalize_description_language(raw_value):
+    if raw_value is None:
+        return DEFAULT_DESCRIPTION_LANGUAGE
+
+    normalized = DESCRIPTION_LANGUAGE_ALIASES.get(str(raw_value).strip().lower())
+    if not normalized:
+        supported = ", ".join(sorted(set(DESCRIPTION_LANGUAGE_ALIASES.values())))
+        raise ValueError(
+            f"Unsupported description language '{raw_value}'. Supported values: {supported}"
+        )
+    return normalized
+
+
+def normalize_languages(raw_languages):
+    if raw_languages is None:
+        return list(DEFAULT_PROGRAMMING_LANGUAGES)
+    if isinstance(raw_languages, str):
+        raw_languages = [raw_languages]
+    if not isinstance(raw_languages, list):
+        raise ValueError("default_languages must be a string or an array of strings")
+
+    normalized = []
+    seen = set()
+    for language in raw_languages:
+        if not isinstance(language, str):
+            raise ValueError("Language entries must be strings")
+        language_key = language.strip().lower()
+        if language_key not in LANGUAGE_CONFIGS:
+            supported = ", ".join(sorted(LANGUAGE_CONFIGS.keys()))
+            raise ValueError(
+                f"Unsupported language '{language}'. Supported values: {supported}"
+            )
+        if language_key not in seen:
+            normalized.append(language_key)
+            seen.add(language_key)
+
+    if not normalized:
+        raise ValueError("At least one default language must be configured")
+    return normalized
+
+
+def get_problem_text(data, description_language):
+    if description_language == "en":
+        title = data.get("title") or data.get("translatedTitle")
+        content = data.get("content") or data.get("translatedContent")
+        return title, content
+
+    title = data.get("translatedTitle") or data.get("title")
+    content = data.get("translatedContent") or data.get("content")
+    return title, content
 
 
 def get_problem(slug, region="cn"):
@@ -404,10 +487,9 @@ def build_code_template(language_key, code, title, md_hint_path, fs_slug):
     raise ValueError(f"Unsupported language: {language_key}")
 
 
-def write_problem_files(data, slug, language_key):
+def write_problem_files(data, slug, language_key, description_language):
     config = LANGUAGE_CONFIGS[language_key]
-    title = data.get("translatedTitle") or data.get("title")
-    content = data.get("translatedContent") or data.get("content")
+    title, content = get_problem_text(data, description_language)
     frontend_id = data.get("questionFrontendId", "0")
     fs_slug = f"p{frontend_id}_{slug.replace('-', '_')}"
     description_slug = f"p{frontend_id}-{slug}"
@@ -439,6 +521,12 @@ def write_problem_files(data, slug, language_key):
 
 
 def parse_args():
+    config, config_path = load_config()
+    default_description_language = normalize_description_language(
+        config.get("default_description_language")
+    )
+    default_languages = normalize_languages(config.get("default_languages"))
+
     parser = argparse.ArgumentParser(description="Fetch LeetCode problems into local language templates.")
     parser.add_argument("slug_or_url", nargs="?", help="LeetCode problem slug or full URL")
     parser.add_argument("--daily", action="store_true", help="Fetch today's daily challenge")
@@ -447,12 +535,18 @@ def parse_args():
         dest="languages",
         action="append",
         choices=sorted(LANGUAGE_CONFIGS.keys()),
-        help="Language to generate. Can be passed multiple times. Defaults to rust.",
+        help="Language to generate. Can be passed multiple times. Defaults to config value or rust.",
     )
     parser.add_argument(
         "--all-langs",
         action="store_true",
         help="Generate files for all supported languages.",
+    )
+    parser.add_argument(
+        "--description-lang",
+        choices=["zh", "en"],
+        default=default_description_language,
+        help="Description language to write into descriptions/*.md. Defaults to config value or zh.",
     )
     args = parser.parse_args()
 
@@ -466,18 +560,21 @@ def parse_args():
     elif args.languages:
         selected_languages = args.languages
     else:
-        selected_languages = ["rust"]
+        selected_languages = default_languages
+
+    if config_path:
+        print(f"Loaded config: {config_path}")
 
     return args, selected_languages
 
 
 def main():
     args, selected_languages = parse_args()
-    slug = get_daily_slug(region="cn") if args.daily else parse_slug(args.slug_or_url)
-    data = get_problem(slug, region="cn")
+    slug = get_daily_slug(region=DEFAULT_REGION) if args.daily else parse_slug(args.slug_or_url)
+    data = get_problem(slug, region=DEFAULT_REGION)
 
     for language_key in selected_languages:
-        write_problem_files(data, slug, language_key)
+        write_problem_files(data, slug, language_key, args.description_lang)
 
 
 if __name__ == "__main__":
