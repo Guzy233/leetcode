@@ -271,7 +271,31 @@ def build_problem_md(title, content):
     return f"# {title}\n\n{content}\n"
 
 
-def build_rust_template(rust_code, md_hint_path):
+def get_placeholder_texts(description_language):
+    if description_language == "en":
+        return {
+            "solution_todo": "Implement your solution here",
+            "test_todo": "Add your test cases here from the problem statement using string parsing",
+            "python_test_todo": "Fill in pytest examples from the problem statement",
+            "cpp_main_todo": "Fill in examples from the problem statement.",
+            "c_main_todo": "Fill in examples from the problem statement.",
+            "go_test_todo": "Fill in go test examples from the problem statement",
+            "ts_test_todo": "Fill in vitest examples from the problem statement",
+        }
+
+    return {
+        "solution_todo": "编写你的逻辑",
+        "test_todo": "根据题面补充测试用例，并使用字符串解析输入",
+        "python_test_todo": "根据题面补全 pytest 示例",
+        "cpp_main_todo": "根据题面补全示例。",
+        "c_main_todo": "根据题面补全示例。",
+        "go_test_todo": "根据题面补全 go test 示例",
+        "ts_test_todo": "根据题面补全 vitest 示例",
+    }
+
+
+def build_rust_template(rust_code, md_hint_path, description_language):
+    placeholder_texts = get_placeholder_texts(description_language)
     has_list_node = "ListNode" in rust_code
     has_tree_node = "TreeNode" in rust_code
 
@@ -304,7 +328,7 @@ def build_rust_template(rust_code, md_hint_path):
     match_fn = re.search(r"(pub fn \w+\s*\(.*?\)\s*(?:->\s*.*?)?\s*\{)", rust_code, re.DOTALL)
     if match_fn:
         fn_header = match_fn.group(1)
-        new_header = fn_header + f'\n        {silence_args}\n        todo!("编写你的逻辑")'
+        new_header = fn_header + f'\n        {silence_args}\n        todo!("{placeholder_texts["solution_todo"]}")'
         rust_code = rust_code.replace(fn_header, new_header, 1)
 
     final_rs_code = f"#![allow(dead_code)]\n\n{rust_code}"
@@ -331,13 +355,14 @@ mod tests {{
         // let expected: Type = serde_json::from_str(expected_str).unwrap();
         // let actual = Solution::{fn_name}(input);
         // assert_eq!(actual, expected);
-        todo!("Add your test cases here from the MD file using string parsing")
+        todo!("{placeholder_texts["test_todo"]}")
     }}
 }}
 """
 
 
-def build_python_template(code, md_hint_path):
+def build_python_template(code, md_hint_path, description_language):
+    placeholder_texts = get_placeholder_texts(description_language)
     python_code = code.rstrip() + "\n"
     match = re.search(r"^([ \t]*)def\s+\w+\s*\(.*\)\s*(?:->\s*[^:]+)?:\s*$", python_code, re.MULTILINE)
     if match:
@@ -363,11 +388,12 @@ import pytest
 def test_examples(input_data, expected):
     # actual = Solution().method_name(...)
     # assert actual == expected
-    raise NotImplementedError("Fill in pytest examples from the problem statement")
+    raise NotImplementedError("{placeholder_texts["python_test_todo"]}")
 '''
 
 
-def build_cpp_template(code, title, md_hint_path):
+def build_cpp_template(code, title, md_hint_path, description_language):
+    placeholder_texts = get_placeholder_texts(description_language)
     return f"""// {title}
 // Build locally if needed:
 // g++ -std=c++20 -O2 -Wall problems/<file>.cpp && ./a.out
@@ -385,13 +411,14 @@ int main() {{
     // Solution s;
     // std::vector<int> nums{{1, 2, 1, 1, 3}};
     // assert(s.minimumDistance(nums) == 6);
-    std::cout << "Fill in examples from the problem statement.\\n";
+    std::cout << "{placeholder_texts["cpp_main_todo"]}\\n";
     return 0;
 }}
 """
 
 
-def build_c_template(code, title, md_hint_path):
+def build_c_template(code, title, md_hint_path, description_language):
+    placeholder_texts = get_placeholder_texts(description_language)
     return f"""// {title}
 // Build locally if needed:
 // gcc -std=c11 -O2 -Wall problems/<file>.c && ./a.out
@@ -408,13 +435,14 @@ int main(void) {{
     // Example:
     // int nums[] = {{1, 2, 1, 1, 3}};
     // assert(minimumDistance(nums, 5) == 6);
-    printf("Fill in examples from the problem statement.\\n");
+    printf("{placeholder_texts["c_main_todo"]}\\n");
     return 0;
 }}
 """
 
 
-def build_go_template(code, md_hint_path):
+def build_go_template(code, md_hint_path, description_language):
+    placeholder_texts = get_placeholder_texts(description_language)
     go_code = code
     if not re.search(r"^\s*package\s+\w+", go_code, re.MULTILINE):
         go_code = f"package problems\n\n{go_code}"
@@ -423,7 +451,7 @@ def build_go_template(code, md_hint_path):
     match_fn = re.search(r"(func\s+\w+\s*\(.*?\)\s*(?:\([^)]*\)|\S+)?\s*\{)", go_code, re.DOTALL)
     if match_fn:
         header = match_fn.group(1)
-        go_code = go_code.replace(header, f'{header}\n    panic("todo")', 1)
+        go_code = go_code.replace(header, f'{header}\n    panic("{placeholder_texts["solution_todo"]}")', 1)
 
     go_code_body = re.sub(r"^\s*package\s+\w+\s*\n", "", go_code, count=1, flags=re.MULTILINE).lstrip()
 
@@ -442,12 +470,13 @@ func Test_example_1(t *testing.T) {{
     // if got != want {{
     //     t.Fatalf("got %v, want %v", got, want)
     // }}
-    t.Skip("Fill in go test examples from the problem statement")
+    t.Skip("{placeholder_texts["go_test_todo"]}")
 }}
 """
 
 
-def build_typescript_template(code, md_hint_path, fs_slug):
+def build_typescript_template(code, md_hint_path, fs_slug, description_language):
+    placeholder_texts = get_placeholder_texts(description_language)
     return f"""import {{ describe, expect, it }} from "vitest";
 
 {code}
@@ -459,7 +488,7 @@ describe("{fs_slug}", () => {{
     it("example 1", () => {{
         // const actual = minimumDistance([...]);
         // expect(actual).toEqual(...);
-        expect.unreachable("Fill in vitest examples from the problem statement");
+        expect.unreachable("{placeholder_texts["ts_test_todo"]}");
     }});
 }});
 
@@ -471,19 +500,19 @@ def build_test_template(language_key, fs_slug, code):
     return None
 
 
-def build_code_template(language_key, code, title, md_hint_path, fs_slug):
+def build_code_template(language_key, code, title, md_hint_path, fs_slug, description_language):
     if language_key == "rust":
-        return build_rust_template(code, md_hint_path)
+        return build_rust_template(code, md_hint_path, description_language)
     if language_key == "python":
-        return build_python_template(code, md_hint_path)
+        return build_python_template(code, md_hint_path, description_language)
     if language_key == "cpp":
-        return build_cpp_template(code, title, md_hint_path)
+        return build_cpp_template(code, title, md_hint_path, description_language)
     if language_key == "c":
-        return build_c_template(code, title, md_hint_path)
+        return build_c_template(code, title, md_hint_path, description_language)
     if language_key == "go":
-        return build_go_template(code, md_hint_path)
+        return build_go_template(code, md_hint_path, description_language)
     if language_key == "typescript":
-        return build_typescript_template(code, md_hint_path, fs_slug)
+        return build_typescript_template(code, md_hint_path, fs_slug, description_language)
     raise ValueError(f"Unsupported language: {language_key}")
 
 
@@ -502,7 +531,12 @@ def write_problem_files(data, slug, language_key, description_language):
 
     write_text(md_path, build_problem_md(title, content))
     md_hint_path = os.path.join(DESCRIPTION_DIR, f"{description_slug}.md").replace("/", "\\")
-    write_text(code_path, build_code_template(language_key, snippet, title, md_hint_path, fs_slug))
+    write_text(
+        code_path,
+        build_code_template(
+            language_key, snippet, title, md_hint_path, fs_slug, description_language
+        ),
+    )
     print(f"Created {md_path}")
     print(f"Created {code_path}")
 
