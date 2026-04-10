@@ -64,7 +64,9 @@ Problem statement file
 
 ## 3. Test Completion Guidelines
 
-After scaffolding, fill in examples from the problem statement instead of solving the full problem unless the user asks for a solution.
+After scaffolding, the assistant must inspect the generated description file and manually fill in examples from the problem statement instead of solving the full problem unless the user asks for a solution.
+
+This step is required even if the generator already created placeholder tests. Do not leave the default placeholder case, parsing comments, or `todo!`/`TODO` test bodies in place when the problem statement provides enough example data to build the test scaffold.
 
 - Rust: complete `#[rstest]` cases in `rust/src/p<id>_<slug>.rs`.
   - Prefer `serde_json::from_str` for fast copy/paste of LeetCode examples.
@@ -77,4 +79,6 @@ After scaffolding, fill in examples from the problem statement instead of solvin
 ## 4. Agent Behavior Notes
 
 - Keep responses short after file creation.
+- For `daily` / `--daily` requests, fetch first, then immediately inspect the generated files and complete the local test scaffold from the statement examples before replying.
+- Treat test completion as assistant work rather than generator work. If the statement contains special structures that are awkward to infer automatically, hand-write the fixture parsing or helper constructors needed for the local tests.
 - While checking templates, you may make small ergonomic prep edits (for example, add obvious length variables) only when they are low-risk and clearly useful.
