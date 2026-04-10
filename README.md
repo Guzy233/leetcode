@@ -267,3 +267,7 @@ g++ -std=c++20 -O2 -Wall cpp/problems/p<id>_<slug>.cpp -o /tmp/lc_cpp && /tmp/lc
 5. 再让 AI 帮你补边界 case、重构或解释思路
 
 这套流程的意义是，把重复、机械、容易出错的准备工作自动化，让人和 AI 都把精力放在真正的算法实现上。
+
+## License
+
+本项目采用 MIT License。详见 [LICENSE](./LICENSE)。

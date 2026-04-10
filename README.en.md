@@ -270,3 +270,7 @@ A very smooth working rhythm usually looks like this:
 5. Ask the AI to add edge cases, refactor, or explain the approach if needed
 
 The whole point of this setup is to automate the repetitive and error-prone preparation work so that both you and the AI can focus on the actual algorithm.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](./LICENSE).
