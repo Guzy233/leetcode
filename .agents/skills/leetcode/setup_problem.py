@@ -31,6 +31,13 @@ LANGUAGE_CONFIGS = {
         "problem_dir": os.path.join("cpp", "problems"),
         "code_ext": ".cpp",
     },
+    "c": {
+        "label": "C",
+        "snippet_slugs": ["c"],
+        "root_dir": "c",
+        "problem_dir": os.path.join("c", "problems"),
+        "code_ext": ".c",
+    },
     "go": {
         "label": "Go",
         "snippet_slugs": ["golang"],
@@ -43,9 +50,7 @@ LANGUAGE_CONFIGS = {
         "snippet_slugs": ["typescript"],
         "root_dir": "typescript",
         "problem_dir": os.path.join("typescript", "problems"),
-        "test_dir": os.path.join("typescript", "tests"),
         "code_ext": ".ts",
-        "test_ext": ".test.ts",
     },
 }
 
@@ -282,11 +287,47 @@ def test_examples(input_data, expected):
 def build_cpp_template(code, title, md_hint_path):
     return f"""// {title}
 // Build locally if needed:
-// g++ -std=c++20 -O2 -Wall problems/<file>.cpp
+// g++ -std=c++20 -O2 -Wall problems/<file>.cpp && ./a.out
 // Problem statement file
 // "{md_hint_path}"
 
+#include <cassert>
+#include <iostream>
+#include <vector>
+
 {code}
+
+int main() {{
+    // Example:
+    // Solution s;
+    // std::vector<int> nums{{1, 2, 1, 1, 3}};
+    // assert(s.minimumDistance(nums) == 6);
+    std::cout << "Fill in examples from the problem statement.\\n";
+    return 0;
+}}
+"""
+
+
+def build_c_template(code, title, md_hint_path):
+    return f"""// {title}
+// Build locally if needed:
+// gcc -std=c11 -O2 -Wall problems/<file>.c && ./a.out
+// Problem statement file
+// "{md_hint_path}"
+
+#include <assert.h>
+#include <stdio.h>
+
+{code}
+
+int main(void) {{
+    // Fill in examples from the problem statement.
+    // Example:
+    // int nums[] = {{1, 2, 1, 1, 3}};
+    // assert(minimumDistance(nums, 5) == 6);
+    printf("Fill in examples from the problem statement.\\n");
+    return 0;
+}}
 """
 
 
@@ -323,46 +364,43 @@ func Test_example_1(t *testing.T) {{
 """
 
 
-def build_typescript_template(code, md_hint_path):
-    return f"""{code}
+def build_typescript_template(code, md_hint_path, fs_slug):
+    return f"""import {{ describe, expect, it }} from "vitest";
+
+{code}
 
 // Problem statement file
 // "{md_hint_path}"
+
+describe("{fs_slug}", () => {{
+    it("example 1", () => {{
+        // const actual = minimumDistance([...]);
+        // expect(actual).toEqual(...);
+        expect.unreachable("Fill in vitest examples from the problem statement");
+    }});
+}});
+
 export {{}};
 """
 
 
-def build_typescript_test_template(fs_slug):
-    return f"""import {{ describe, expect, it }} from "vitest";
-import {{ Solution }} from "../problems/{fs_slug}";
-
-describe("{fs_slug}", () => {{
-    it("example 1", () => {{
-        // const actual = new Solution().methodName(...);
-        // expect(actual).toEqual(expected);
-        expect.unreachable("Fill in vitest examples from the problem statement");
-    }});
-}});
-"""
-
-
 def build_test_template(language_key, fs_slug, code):
-    if language_key == "typescript":
-        return build_typescript_test_template(fs_slug)
     return None
 
 
-def build_code_template(language_key, code, title, md_hint_path):
+def build_code_template(language_key, code, title, md_hint_path, fs_slug):
     if language_key == "rust":
         return build_rust_template(code, md_hint_path)
     if language_key == "python":
         return build_python_template(code, md_hint_path)
     if language_key == "cpp":
         return build_cpp_template(code, title, md_hint_path)
+    if language_key == "c":
+        return build_c_template(code, title, md_hint_path)
     if language_key == "go":
         return build_go_template(code, md_hint_path)
     if language_key == "typescript":
-        return build_typescript_template(code, md_hint_path)
+        return build_typescript_template(code, md_hint_path, fs_slug)
     raise ValueError(f"Unsupported language: {language_key}")
 
 
@@ -382,7 +420,7 @@ def write_problem_files(data, slug, language_key):
 
     write_text(md_path, build_problem_md(title, content))
     md_hint_path = os.path.join(DESCRIPTION_DIR, f"{description_slug}.md").replace("/", "\\")
-    write_text(code_path, build_code_template(language_key, snippet, title, md_hint_path))
+    write_text(code_path, build_code_template(language_key, snippet, title, md_hint_path, fs_slug))
     print(f"Created {md_path}")
     print(f"Created {code_path}")
 

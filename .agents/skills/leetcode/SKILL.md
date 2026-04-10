@@ -38,12 +38,13 @@ python3 .agents/skills/leetcode/setup_problem.py <slug-or-url> --all-langs
 - Python:
   - `python/problems/p<id>_<slug>.py` (includes inline pytest template)
 - C++:
-  - `cpp/problems/p<id>_<slug>.cpp`
+  - `cpp/problems/p<id>_<slug>.cpp` (single-file function + `main` test scaffold)
+- C:
+  - `c/problems/p<id>_<slug>.c` (single-file function + `main` test scaffold)
 - Go:
   - `go/problems/p<id>_<slug>_test.go` (single file with function + test scaffold)
 - TypeScript:
-  - `typescript/problems/p<id>_<slug>.ts`
-  - `typescript/tests/p<id>_<slug>.test.ts`
+  - `typescript/problems/p<id>_<slug>.ts` (includes solution scaffold + vitest scaffold in same file)
 
 Every generated source file includes a clickable comment block for the description file in this format:
 
@@ -62,7 +63,7 @@ After scaffolding, fill in examples from the problem statement instead of solvin
   - Keep `pretty_assertions::assert_eq`.
 - Python: complete `@pytest.mark.parametrize` directly in `python/problems/p<id>_<slug>.py`.
 - Go: complete tests in `go/problems/p<id>_<slug>_test.go`.
-- TypeScript: complete tests in `typescript/tests/p<id>_<slug>.test.ts`.
+- TypeScript: complete tests in `typescript/problems/p<id>_<slug>.ts`.
 
 ## 4. Agent Behavior Notes
 
