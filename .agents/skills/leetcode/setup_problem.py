@@ -175,9 +175,6 @@ def build_test_path(fs_slug, language_key):
     if "test_ext" not in config:
         return None
 
-    if language_key == "go":
-        return os.path.join(config["problem_dir"], f"{fs_slug}{config['test_ext']}")
-
     base_path = os.path.join(config["test_dir"], fs_slug)
     return f"{base_path}{config['test_ext']}"
 
